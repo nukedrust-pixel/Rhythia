@@ -394,6 +394,11 @@ body.rh .before-scroll-node > div {
     background-image: none !important;
 }
 
+body.rh .main-view-container .rh-nobg {
+    background: none !important;
+    background-color: transparent !important;
+}
+
 body.rh .main-topBar-background {
     background: rgba(17, 14, 23, 0.85) !important;
 }
@@ -2150,7 +2155,7 @@ body.rh .main-view-container section[data-shelf="carousel"] [data-carousel-item=
     box-sizing: border-box;
 }
 
-body.rh .main-view-container section[data-shelf="carousel"] .e-10451-card:not(.main-card-cardContainer):has(.main-image-image) {
+body.rh .main-view-container section[data-shelf="carousel"] .e-10451-card:not(.main-card-cardContainer):has(img) {
     position: relative;
     width: 100%;
     box-sizing: border-box;
@@ -2161,16 +2166,16 @@ body.rh .main-view-container section[data-shelf="carousel"] .e-10451-card:not(.m
     transition: box-shadow 0.25s ease, transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-body.rh .main-view-container section[data-shelf="carousel"] .e-10451-card:not(.main-card-cardContainer):has(.main-image-image)::after {
+body.rh .main-view-container section[data-shelf="carousel"] .e-10451-card:not(.main-card-cardContainer):has(img)::after {
     background-color: transparent !important;
 }
 
-body.rh .main-view-container section[data-shelf="carousel"] .e-10451-card:not(.main-card-cardContainer):has(.main-image-image):hover {
+body.rh .main-view-container section[data-shelf="carousel"] .e-10451-card:not(.main-card-cardContainer):has(img):hover {
     transform: translateY(-4px);
     box-shadow: inset 0 0 0 2px rgba(232, 112, 196, 0.85), 0 0 22px rgba(232, 112, 196, 0.35), 0 12px 28px rgba(0, 0, 0, 0.55);
 }
 
-body.rh .main-view-container section[data-shelf="carousel"] .e-10451-card:not(.main-card-cardContainer):has(.main-image-image) > div:has(> .main-image-image) {
+body.rh .main-view-container section[data-shelf="carousel"] .e-10451-card:not(.main-card-cardContainer):has(img) > div:has(> img) {
     position: relative;
     overflow: hidden;
     border-radius: 8px;
@@ -2178,7 +2183,7 @@ body.rh .main-view-container section[data-shelf="carousel"] .e-10451-card:not(.m
     background: #000;
 }
 
-body.rh .main-view-container section[data-shelf="carousel"] .e-10451-card:not(.main-card-cardContainer):has(.main-image-image) > div:has(> .main-image-image)::before {
+body.rh .main-view-container section[data-shelf="carousel"] .e-10451-card:not(.main-card-cardContainer):has(img) > div:has(> img)::before {
     content: "▶ VIDEO";
     position: absolute;
     top: 8px;
@@ -2195,7 +2200,7 @@ body.rh .main-view-container section[data-shelf="carousel"] .e-10451-card:not(.m
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
 }
 
-body.rh .main-view-container section[data-shelf="carousel"] .e-10451-card:not(.main-card-cardContainer):has(.main-image-image) > div:has(> .main-image-image)::after {
+body.rh .main-view-container section[data-shelf="carousel"] .e-10451-card:not(.main-card-cardContainer):has(img) > div:has(> img)::after {
     content: "";
     position: absolute;
     inset: 0;
@@ -2206,7 +2211,7 @@ body.rh .main-view-container section[data-shelf="carousel"] .e-10451-card:not(.m
     pointer-events: none;
 }
 
-body.rh .main-view-container section[data-shelf="carousel"] .e-10451-card:not(.main-card-cardContainer):has(.main-image-image) .main-image-image {
+body.rh .main-view-container section[data-shelf="carousel"] .e-10451-card:not(.main-card-cardContainer):has(img) img {
     width: 100% !important;
     height: 100% !important;
     object-fit: cover;
@@ -2214,19 +2219,19 @@ body.rh .main-view-container section[data-shelf="carousel"] .e-10451-card:not(.m
     transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-body.rh .main-view-container section[data-shelf="carousel"] .e-10451-card:not(.main-card-cardContainer):has(.main-image-image):hover .main-image-image {
+body.rh .main-view-container section[data-shelf="carousel"] .e-10451-card:not(.main-card-cardContainer):has(img):hover img {
     transform: scale(1.06);
 }
 
-body.rh .main-view-container section[data-shelf="carousel"] .e-10451-card:not(.main-card-cardContainer):has(.main-image-image) .e-10451-card-title {
+body.rh .main-view-container section[data-shelf="carousel"] .e-10451-card:not(.main-card-cardContainer):has(img) .e-10451-card-title {
     margin-top: 8px;
     color: #fff !important;
     font-size: 16px !important;
     font-weight: 600 !important;
 }
 
-body.rh .main-view-container section[data-shelf="carousel"] .e-10451-card:not(.main-card-cardContainer):has(.main-image-image) .encore-internal-color-text-subdued,
-body.rh .main-view-container section[data-shelf="carousel"] .e-10451-card:not(.main-card-cardContainer):has(.main-image-image) .encore-internal-color-text-subdued a {
+body.rh .main-view-container section[data-shelf="carousel"] .e-10451-card:not(.main-card-cardContainer):has(img) .encore-internal-color-text-subdued,
+body.rh .main-view-container section[data-shelf="carousel"] .e-10451-card:not(.main-card-cardContainer):has(img) .encore-internal-color-text-subdued a {
     color: #c9a3d6 !important;
     font-weight: 500;
 }

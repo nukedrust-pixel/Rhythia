@@ -28,13 +28,165 @@
         if (!top) return;
         for (const c of top.children) {
             if (c.id?.startsWith("rh-") || c.dataset.rhArea) continue;
-            let tag = AREAS[getComputedStyle(c).gridArea.trim()];
+            const area = getComputedStyle(c).gridArea.trim();
+            let tag = AREAS[area];
             if (!tag && (c.id === "global-nav-bar" || c.classList.contains("Root__globalNav"))) tag = "gnav";
-            if (!tag && c.id !== "lyrics-cinema" && (c.classList.contains("Root__cinema-view") || c.querySelector("video"))) tag = "cinema";
+            if (
+                !tag &&
+                c.id !== "lyrics-cinema" &&
+                (c.classList.contains("Root__cinema-view") || area === "left-sidebar / left-sidebar / main-view / main-view" || c.querySelector("video"))
+            )
+                tag = "cinema";
             if (tag) c.dataset.rhArea = tag;
         }
     }
     tagAreas();
+
+    // Spotify's design-system classes carry a build prefix (e-10451-, e-10860-, ...). user.css is written
+    // against e-10451-; when Spotify ships a different prefix, re-inject those rules with the live one.
+    const CSS_PREFIX = "e-10451-";
+    let prefixSig = "";
+    function adaptPrefix() {
+        const m = document.querySelector('[class*="encore-text"]')?.className.match(/\be-\d+-/);
+        if (!m || m[0] === CSS_PREFIX) return;
+        const live = m[0];
+        const rules = [];
+        for (const sh of document.styleSheets) {
+            const node = sh.ownerNode;
+            const isTheme =
+                node && (node.id === "userCSS" || node.classList?.contains("marketplaceUserCSS") || /user\.css/.test(node.getAttribute?.("href") || ""));
+            if (!isTheme) continue;
+            let list;
+            try {
+                list = sh.cssRules;
+            } catch {
+                continue;
+            }
+            for (const r of list) if (r.cssText.includes(CSS_PREFIX)) rules.push(r.cssText.split(CSS_PREFIX).join(live));
+        }
+        const sig = live + rules.length + ":" + rules.reduce((a, t) => a + t.length, 0);
+        if (!rules.length || sig === prefixSig) return;
+        prefixSig = sig;
+        let st = document.getElementById("rh-prefix");
+        if (!st) {
+            st = document.createElement("style");
+            st.id = "rh-prefix";
+        }
+        st.textContent = rules.join("\n");
+        document.head.appendChild(st);
+    }
+
+    // Spicetify maps Spotify's hashed class names to readable ones (main-card-cardContainer, ...), but that
+    // map lags behind new Spotify builds. Add the readable names the theme relies on by recognizing structure.
+    const add = (e, ...c) => e && c.forEach((x) => e.classList.contains(x) || e.classList.add(x));
+    function shimClasses(root) {
+        root.querySelectorAll('[data-encore-id="card"]').forEach((card) => {
+            const img = card.querySelector("img");
+            const r = img?.getBoundingClientRect();
+            if (img && (!r || !r.width || !r.height)) return;
+            const video = !!img && r.width > r.height * 1.25;
+            card.dataset.rhShim = video ? "video" : "card";
+            if (video) {
+                card.classList.remove("main-card-cardContainer");
+                add(img, "main-image-image");
+                return;
+            }
+            add(card, "main-card-cardContainer");
+            if (img) {
+                add(img, "main-image-image", "main-cardImage-image");
+                const wrap = img.parentElement?.parentElement;
+                if (wrap && wrap !== card) {
+                    add(wrap, "main-cardImage-imageWrapper");
+                    if (wrap.parentElement !== card) add(wrap.parentElement, "main-card-imageContainer");
+                }
+            }
+            add(card.querySelector('[data-encore-id="cardTitle"]'), "main-card-cardTitle");
+            add(card.querySelector('[data-encore-id="cardSubtitle"]'), "main-card-cardMetadata");
+        });
+        root.querySelectorAll("button[data-is-icon-only]").forEach((b) => {
+            if (/legacy-button-primary/.test(b.className) && b.parentElement) add(b.parentElement, "main-playButton-PlayButton");
+        });
+        root.querySelectorAll("section h2").forEach((h) => {
+            const g = h.closest('[role="group"]');
+            if (!g || !/legacy-list-row/.test(g.className)) return;
+            add(h, "main-shelf-title");
+            add(g, "main-shelf-titleWrapper");
+        });
+        root.querySelectorAll('[style*="--min-column-width"]').forEach((g) => add(g, "main-gridContainer-gridContainer"));
+        root.querySelectorAll('[role="row"]').forEach((row) => {
+            const inner = row.firstElementChild;
+            if (!inner) return;
+            const cells = [...inner.children];
+            if (cells.some((c) => c.getAttribute("role") === "columnheader")) {
+                add(inner, "main-trackList-trackListHeader");
+                return;
+            }
+            if (cells.length < 3 || !cells.every((c) => c.getAttribute("role") === "gridcell")) return;
+            add(inner, "main-trackList-trackListRow", "main-trackList-trackListRowGrid");
+            add(cells[0], "main-trackList-rowSectionIndex");
+            add(cells[0].firstElementChild, "main-trackList-rowMarker");
+            add(cells[1], "main-trackList-rowSectionStart");
+            const img = cells[1].querySelector("img");
+            add(img, "main-image-image", "main-trackList-rowImage");
+            add(cells[1].querySelector('[data-encore-id="text"]'), "main-trackList-rowMainContentTitle");
+        });
+        root.querySelectorAll('[data-testid="media"] img, li[role="row"] img').forEach((img) => {
+            add(img, "main-image-image");
+            if (img.parentElement?.tagName === "DIV") add(img.parentElement, "x-entityImage-imageContainer");
+        });
+    }
+    // Full-width coloured header bands (Home, playlist and album headers) that hide the theme background.
+    function stripHeaderBands() {
+        const mv = document.querySelector(".main-view-container");
+        if (!mv) return;
+        const box = mv.getBoundingClientRect();
+        mv.querySelectorAll("div:not([data-rh-bgchk])").forEach((e) => {
+            const r = e.getBoundingClientRect();
+            if (!r.height) return;
+            e.dataset.rhBgchk = "1";
+            if (r.width < box.width * 0.6 || r.height < 120 || r.top > box.top + 160) return;
+            if (e.closest('[data-encore-id="card"], [role="row"], #rh-wheel')) return;
+            const cs = getComputedStyle(e);
+            const colored = cs.backgroundImage.includes("gradient") || (cs.backgroundColor !== "rgba(0, 0, 0, 0)" && cs.backgroundColor !== "transparent");
+            if (colored) add(e, "rh-nobg");
+        });
+    }
+    function shimMenus() {
+        document.querySelectorAll('[role="menu"]').forEach((m) => {
+            add(m, "main-contextMenu-menu");
+            m.querySelectorAll('[role="menuitem"] > button, button[role="menuitem"]').forEach((b) => add(b, "main-contextMenu-menuItemButton"));
+        });
+    }
+    let shimT = 0;
+    let bandPath = null;
+    let bandAt = 0;
+    const scheduleShim = () => {
+        if (shimT) return;
+        shimT = setTimeout(() => {
+            shimT = 0;
+            const main = document.querySelector(".Root__top-container");
+            if (main) shimClasses(main);
+            shimMenus();
+            const p = H.location?.pathname;
+            if (p !== bandPath) {
+                bandPath = p;
+                bandAt = Date.now();
+            }
+            if (Date.now() - bandAt < 6000) stripHeaderBands();
+        }, 80);
+    };
+    // React rewrites className on re-render (e.g. when an image finishes loading), dropping the added names.
+    const SHIM_RE = /\b(main-(card|cardImage|image|shelf|trackList|playButton|gridContainer|contextMenu)-|x-entityImage-)/;
+    new MutationObserver((muts) => {
+        for (const m of muts) {
+            if (m.type === "childList" || (m.oldValue && SHIM_RE.test(m.oldValue) && !SHIM_RE.test(m.target.className))) {
+                scheduleShim();
+                return;
+            }
+        }
+    }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"], attributeOldValue: true });
+    scheduleShim();
+
     const SEL = {
         main: '.Root__top-container > :is(.Root__main-view, [data-rh-area="main"])',
         left: '.Root__top-container > :is(.Root__nav-bar, [data-rh-area="left"])',
@@ -271,6 +423,8 @@
         const top = $(".Root__top-container");
         if (!top) return;
         tagAreas();
+        adaptPrefix();
+        scheduleShim();
         document.body.classList.add("rh");
         if (!top.contains(topbar)) top.appendChild(topbar);
         if (!top.contains(panel)) top.appendChild(panel);
@@ -312,6 +466,15 @@
         sideTimers[cls] = setTimeout(() => flip(() => cl.remove(cls, cls + "-closing")), 260);
     }
 
+    // The devices ("Connect") button has no stable test id on newer builds; it sits right before the mute button.
+    function devicesButton() {
+        const named = $(`${SEL.bar} [data-testid="control-button-connect"]`);
+        if (named) return named;
+        const btns = [...document.querySelectorAll(`${SEL.bar} button`)];
+        const mute = btns.findIndex((b) => b.dataset.testid === "volume-bar-toggle-mute-button");
+        return mute > 0 ? btns[mute - 1] : $(`${SEL.bar} button[aria-label*="evice"]`);
+    }
+
     let rightPanel = null;
     function toggleRight(kind, btn) {
         if (isOpen("rh-right") && rightPanel === kind) {
@@ -343,8 +506,7 @@
             updRoute();
         },
         queue: () => toggleRight("queue", $('[data-testid="control-button-queue"]')),
-        devices: () =>
-            toggleRight("devices", $(`${SEL.bar} [data-testid="control-button-connect"]`) || $(`${SEL.bar} button[aria-label*="evice"]`)),
+        devices: () => toggleRight("devices", devicesButton()),
         lyrics: () => $('[data-testid="lyrics-button"]')?.click(),
         mini: () => $('[data-testid="pip-toggle-button"]')?.click(),
         fullscreen: () => $('[data-testid="fullscreen-mode-button"]')?.click(),
@@ -361,7 +523,7 @@
         mute: () => P.toggleMute(),
         vaudio: () => cinemaBtn(/^Switch to (audio|video)$/i)?.click(),
         vfull: () => (cinemaBtn(/^(Enter|Exit) full screen$/i) || $('[data-testid="fullscreen-mode-button"]'))?.click(),
-        vmin: () => (cinemaBtn(/^Minimize Now Playing view$/i) || cinemaBtn(/^Exit full screen$/i))?.click(),
+        vmin: () => (cinemaBtn(/^Minimize Now Playing view$/i) || cinemaBtn(/^Exit full screen$/i) || $('[data-testid="fullscreen-mode-button"]'))?.click(),
         album: () => {
             const r = route(currentMeta()?.m.album_uri);
             if (r) H.push(r);
@@ -399,7 +561,10 @@
     });
     vq("rh-vvol").addEventListener("input", (e) => P.setVolume(e.target.value / 100));
 
-    const cinemaBtn = (re) => [...document.querySelectorAll(`${SEL.cinema} button`)].find((b) => re.test(b.getAttribute("aria-label") || ""));
+    const cinemaBtn = (re) => {
+        tagAreas();
+        return [...document.querySelectorAll(`${SEL.cinema} button`)].find((b) => re.test(b.getAttribute("aria-label") || ""));
+    };
     function updVideoButtons() {
         if (!document.querySelector(SEL.cinema)) return;
         const sw = cinemaBtn(/^Switch to (audio|video)$/i);
@@ -611,7 +776,7 @@
     function numberQueue() {
         let n = 0;
         document.querySelectorAll(`${SEL.right} li[role='row']`).forEach((li) => {
-            const playing = !!li.querySelector(".e-10451-legacy-list-row-title.encore-internal-color-text-bright-accent");
+            const playing = !!li.querySelector('[class*="-legacy-list-row-title"].encore-internal-color-text-bright-accent');
             const rank = playing ? "" : String(++n);
             if (li.dataset.rhRank !== rank) li.dataset.rhRank = rank;
         });
@@ -1537,12 +1702,12 @@ void main() {
         if (!document.body.classList.contains("rh-search-route")) return;
         const fresh = [
             ...document.querySelectorAll(".main-view-container [role='grid'] > [role='row'], .main-view-container .main-card-cardContainer"),
-        ].filter((e) => !e.dataset.rhIn && !e.querySelector(".e-10451-legacy-chip"));
+        ].filter((e) => !e.dataset.rhIn && !e.querySelector('[class*="-legacy-chip"]'));
         fresh.forEach((e, i) => {
             e.style.setProperty("--rh-i", String(Math.min(i, 22)));
             e.dataset.rhIn = "1";
         });
-        const top = document.querySelector(".main-view-container [role='grid'] > [role='row']:has(> .e-10451-legacy-list-row)");
+        const top = document.querySelector(".main-view-container [role='grid'] > [role='row']:has(> [class*='-legacy-list-row '])");
         document.querySelectorAll(".main-view-container [data-rh-top]").forEach((e) => e !== top && e.removeAttribute("data-rh-top"));
         if (top && !top.hasAttribute("data-rh-top")) top.setAttribute("data-rh-top", "");
     }
