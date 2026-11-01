@@ -19,6 +19,29 @@
     const playFns = [];
     const onSong = (fn) => songFns.push(fn);
     const onPlayPause = (fn) => playFns.push(fn);
+
+    // Spicetify's readable class names (.Root__main-view etc.) lag behind new Spotify versions, so the layout
+    // regions are tagged by their grid area instead, which Spotify has kept stable.
+    const AREAS = { "main-view": "main", "left-sidebar": "left", "right-sidebar": "right", "now-playing-bar": "bar" };
+    function tagAreas() {
+        const top = document.querySelector(".Root__top-container");
+        if (!top) return;
+        for (const c of top.children) {
+            if (c.id?.startsWith("rh-") || c.dataset.rhArea) continue;
+            let tag = AREAS[getComputedStyle(c).gridArea.trim()];
+            if (!tag && (c.id === "global-nav-bar" || c.classList.contains("Root__globalNav"))) tag = "gnav";
+            if (!tag && c.id !== "lyrics-cinema" && (c.classList.contains("Root__cinema-view") || c.querySelector("video"))) tag = "cinema";
+            if (tag) c.dataset.rhArea = tag;
+        }
+    }
+    tagAreas();
+    const SEL = {
+        main: '.Root__top-container > :is(.Root__main-view, [data-rh-area="main"])',
+        left: '.Root__top-container > :is(.Root__nav-bar, [data-rh-area="left"])',
+        right: '.Root__top-container > :is(.Root__right-sidebar, [data-rh-area="right"])',
+        bar: '.Root__top-container > :is(.Root__now-playing-bar, [data-rh-area="bar"])',
+        cinema: '.Root__top-container > :is(.Root__cinema-view, [data-rh-area="cinema"])',
+    };
     const $ = (sel, root = document) => root.querySelector(sel);
     const el = (html) => {
         const t = document.createElement("template");
@@ -235,7 +258,7 @@
     const q = (id) => panel.querySelector("#" + id) || topbar.querySelector("#" + id);
 
     function syncVars() {
-        const nb = $(".Root__nav-bar");
+        const nb = $(SEL.left);
         if (!nb) return;
         const cs = getComputedStyle(nb);
         const lw = parseFloat(cs.getPropertyValue("--left-sidebar-width")) || 72;
@@ -247,6 +270,7 @@
     function mount() {
         const top = $(".Root__top-container");
         if (!top) return;
+        tagAreas();
         document.body.classList.add("rh");
         if (!top.contains(topbar)) top.appendChild(topbar);
         if (!top.contains(panel)) top.appendChild(panel);
@@ -261,7 +285,7 @@
 
     // Animates elements whose left edge moves when the grid changes, using transforms only (no per-frame layout).
     function flip(change) {
-        const els = [panel, wheel, lyr, document.querySelector(".Root__main-view")].filter((e) => e && e.isConnected && e.getClientRects().length);
+        const els = [panel, wheel, lyr, document.querySelector(SEL.main)].filter((e) => e && e.isConnected && e.getClientRects().length);
         const before = new Map(els.map((e) => [e, e.getBoundingClientRect().left]));
         change();
         els.forEach((e) => {
@@ -319,7 +343,8 @@
             updRoute();
         },
         queue: () => toggleRight("queue", $('[data-testid="control-button-queue"]')),
-        devices: () => toggleRight("devices", $('.Root__now-playing-bar button[aria-label*="evice"]')),
+        devices: () =>
+            toggleRight("devices", $(`${SEL.bar} [data-testid="control-button-connect"]`) || $(`${SEL.bar} button[aria-label*="evice"]`)),
         lyrics: () => $('[data-testid="lyrics-button"]')?.click(),
         mini: () => $('[data-testid="pip-toggle-button"]')?.click(),
         fullscreen: () => $('[data-testid="fullscreen-mode-button"]')?.click(),
@@ -374,9 +399,9 @@
     });
     vq("rh-vvol").addEventListener("input", (e) => P.setVolume(e.target.value / 100));
 
-    const cinemaBtn = (re) => [...document.querySelectorAll(".Root__cinema-view button")].find((b) => re.test(b.getAttribute("aria-label") || ""));
+    const cinemaBtn = (re) => [...document.querySelectorAll(`${SEL.cinema} button`)].find((b) => re.test(b.getAttribute("aria-label") || ""));
     function updVideoButtons() {
-        if (!document.querySelector(".Root__cinema-view")) return;
+        if (!document.querySelector(SEL.cinema)) return;
         const sw = cinemaBtn(/^Switch to (audio|video)$/i);
         vq("rh-vaudio").hidden = !sw;
         if (sw) vq("rh-vaudio").title = sw.getAttribute("aria-label");
@@ -585,7 +610,7 @@
 
     function numberQueue() {
         let n = 0;
-        document.querySelectorAll(".Root__right-sidebar li[role='row']").forEach((li) => {
+        document.querySelectorAll(`${SEL.right} li[role='row']`).forEach((li) => {
             const playing = !!li.querySelector(".e-10451-legacy-list-row-title.encore-internal-color-text-bright-accent");
             const rank = playing ? "" : String(++n);
             if (li.dataset.rhRank !== rank) li.dataset.rhRank = rank;
@@ -1527,9 +1552,9 @@ void main() {
         markCurrentRow.t = setTimeout(markCurrentRow, 60);
         clearTimeout(dropInResults.t);
         dropInResults.t = setTimeout(dropInResults, 40);
-    }).observe(document.querySelector(".Root__main-view") || document.body, { childList: true, subtree: true });
+    }).observe(document.querySelector(SEL.main) || document.body, { childList: true, subtree: true });
 
-    const rightSidebar = document.querySelector(".Root__right-sidebar");
+    const rightSidebar = document.querySelector(SEL.right);
     if (rightSidebar) {
         new MutationObserver(() => {
             clearTimeout(numberQueue.t);
