@@ -1,0 +1,11 @@
+{
+    "name": "Rhythia",
+    "description": "Turn Spotify into a rhythm-game song select: scroll-to-play song wheel, leaderboard queue, note-highway lyrics with word & letter sync, and a music-reactive topographic background.",
+    "preview": "screenshots/wheel.png",
+    "readme": "README.md",
+    "usercss": "user.css",
+    "schemes": "color.ini",
+    "include": ["https://cdn.jsdelivr.net/gh/nukedrust-pixel/Rhythia@main/theme.js"],
+    "authors": [{ "name": "nukedrust-pixel", "url": "https://github.com/nukedrust-pixel" }],
+    "tags": ["dark", "animated", "game", "lyrics"]
+}
