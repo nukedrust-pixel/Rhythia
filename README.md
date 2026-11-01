@@ -100,6 +100,14 @@ When a song has only line timing, Word and Letter modes spread each line's time 
 
 ## FAQ
 
+**I installed it from the Marketplace but nothing changed.**
+The Marketplace can only apply themes when Spicetify's current theme is set to `marketplace`. Run this, then reopen Spotify:
+```bash
+spicetify config current_theme marketplace inject_css 1 replace_colors 1 inject_theme_js 1
+spicetify apply
+```
+If it still looks like normal Spotify, remove Rhythia under **Marketplace → Installed**, restart Spotify and install it again.
+
 **Something looks off after a Spotify update.**
 Spotify renames its internal styles from time to time. Open an issue with a screenshot and your Spotify and Spicetify versions.
 
